@@ -89,11 +89,11 @@ end)
 -- ============================================
 local doorIndex = 1
 local allDoors = {}
-local lastF1Press = false
 local lastF2Press = false
 local lastF3Press = false
 local lastF4Press = false
 local lastF5Press = false
+local lastF6Press = false
 
 local function getMyHRP()
     local char = localPlayer.Character
@@ -160,9 +160,9 @@ local function tpToWaypoint()
     local hrp = getMyHRP()
     if not hrp then return end
     if not savedWaypoint then
-        print("No waypoint saved! Press F1 first!")
+        print("No waypoint saved! Press F6 first!")
         if type(notify) == "function" then
-            notify("No Waypoint!", "Press F1 to save position", 2)
+            notify("No Waypoint!", "Press F6 to save position", 2)
         end
         return
     end
@@ -177,7 +177,7 @@ local function clearWaypoint()
     savedWaypoint = nil
     print("Waypoint cleared!")
     if type(notify) == "function" then
-        notify("Waypoint Cleared!", "Press F1 to save new position", 2)
+        notify("Waypoint Cleared!", "Press F6 to save new position", 2)
     end
 end
 
@@ -325,7 +325,7 @@ UI.AddTab("EMDEN", function(tab)
     end)
 
     local waypointSec = tab:Section("Waypoint", "Left")
-    waypointSec:Button("savewaypoint", "Save Waypoint [F1]", function()
+    waypointSec:Button("savewaypoint", "Save Waypoint [F6]", function()
         saveWaypoint()
     end)
     waypointSec:Button("tpwaypoint", "TP to Waypoint [F3]", function()
@@ -356,7 +356,7 @@ UI.AddTab("EMDEN", function(tab)
     infoSec:Text("F2 = Next door")
     infoSec:Spacing()
     infoSec:Text("=== Waypoint ===")
-    infoSec:Text("F1 = Save waypoint")
+    infoSec:Text("F6 = Save waypoint")
     infoSec:Text("F3 = TP to waypoint")
     infoSec:Text("F5 = Clear waypoint")
     infoSec:Spacing()
@@ -374,15 +374,11 @@ end
 -- ============================================
 
 while true do
-    local f1Press = iskeypressed(0x70) -- F1 = Save waypoint
     local f2Press = iskeypressed(0x71) -- F2 = Next door
     local f3Press = iskeypressed(0x72) -- F3 = TP to waypoint
     local f4Press = iskeypressed(0x73) -- F4 = Drag toggle
     local f5Press = iskeypressed(0x74) -- F5 = Clear waypoint
-
-    if f1Press and not lastF1Press then
-        saveWaypoint()
-    end
+    local f6Press = iskeypressed(0x75) -- F6 = Save waypoint
 
     if f2Press and not lastF2Press then
         tpNextDoor()
@@ -410,10 +406,14 @@ while true do
         clearWaypoint()
     end
 
-    lastF1Press = f1Press
+    if f6Press and not lastF6Press then
+        saveWaypoint()
+    end
+
     lastF2Press = f2Press
     lastF3Press = f3Press
     lastF4Press = f4Press
     lastF5Press = f5Press
+    lastF6Press = f6Press
     task.wait(0.01)
 end

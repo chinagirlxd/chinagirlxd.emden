@@ -1,88 +1,6 @@
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
 local localPlayer = Players.LocalPlayer
 local playerGui = localPlayer.PlayerGui
-
--- ============================================
--- ESP - UNTOUCHED
--- ============================================
-_G.ESPWanted = true
-_G.ESPCops = true
-_G.ColorCop = Color3.new(0,0,1.228)
-_G.ColorWanted = Color3.new(1,0,0)
-local circles = {}
-
-local function isWanted(player)
-    local wantedlevel = player:GetAttribute("IsWanted")
-    if wantedlevel == true then return true end
-    return false
-end
-
-local function isCop(player)
-    local job = player:GetAttribute("Job")
-    if job == 1 or job == 8 then return true end
-    return false
-end
-
-local function getHeadPos(player)
-    local char = player.Character
-    if not char then return nil end
-    local head = char:FindFirstChild("Head")
-    if not head then return nil end
-    return head.Position + Vector3.new(0, -5, 0)
-end
-
-local function getDist(a, b)
-    local dx = a.X - b.X
-    local dy = a.Y - b.Y
-    local dz = a.Z - b.Z
-    return math.sqrt(dx * dx + dy * dy + dz * dz)
-end
-
-spawn(function()
-    while true do
-        task.wait(1 / 30)
-        local camera = Workspace.CurrentCamera
-        if not camera then continue end
-        for player, c in pairs(circles) do
-            c:Remove()
-            circles[player] = nil
-        end
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player == localPlayer then continue end
-            local wanted = isWanted(player)
-            local cop = isCop(player)
-            local showPlayer = false
-            if wanted and _G.ESPWanted then showPlayer = true
-            elseif cop and _G.ESPCops then showPlayer = true end
-            if not showPlayer then continue end
-            local worldPos = getHeadPos(player)
-            if not worldPos then continue end
-            local screenPos, onScreen
-            if type(WorldToScreen) == "function" then
-                screenPos, onScreen = WorldToScreen(worldPos)
-            else
-                local vec, on = camera:WorldToViewportPoint(worldPos)
-                screenPos = Vector2.new(vec.X, vec.Y)
-                onScreen = on
-            end
-            if not onScreen then continue end
-            local dist = getDist(worldPos, camera.Position)
-            local radius = math.clamp(400 / dist, 3, 7)
-            local c = Drawing.new("Circle")
-            if wanted then c.Color = _G.ColorWanted else c.Color = _G.ColorCop end
-            c.Filled = true
-            c.Radius = radius
-            c.NumSides = 32
-            c.Thickness = 1
-            c.Transparency = 1
-            c.Position = screenPos
-            c.Visible = true
-            c.ZIndex = 5
-            circles[player] = c
-        end
-    end
-end)
 
 -- ============================================
 -- STAFF / MOD DETECTOR
@@ -314,7 +232,7 @@ task.spawn(function()
                         elseif reason:find("VF") then roleColor = "🔵"
                         elseif reason == "Game Moderator" or reason == "Staff" then roleColor = "🟡"
                         elseif reason == "WATCHLIST" then roleColor = "🟣"
-                        elseif reason == "Keyword Match" then roleColor = "⚪" end
+                        end
                         notify(roleColor .. " STAFF: " .. p.Name, reason .. " joined!", 8)
                     end
                 end
@@ -330,91 +248,6 @@ task.spawn(function()
         end
     end
 end)
-
--- ============================================
--- DOOR TP
--- ============================================
-local doorIndex = 1
-local allDoors = {}
-local lastF2Press = false
-local lastF3Press = false
-local lastF4Press = false
-local lastF5Press = false
-local lastF6Press = false
-
-local function getMyHRP()
-    local char = localPlayer.Character
-    if not char then return nil end
-    return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
-end
-
-local function loadAllDoors()
-    local doors = {}
-    local hrp = getMyHRP()
-    for i, v in ipairs(workspace:GetDescendants()) do
-        if v.Name == "OnDrilled" then
-            local door = v.Parent
-            local ok, pos = pcall(function() return door.Position end)
-            if ok and pos then
-                local key = math.floor(pos.X) .. "_" .. math.floor(pos.Z)
-                local dist = 999999
-                if hrp then
-                    local dx = hrp.Position.X - pos.X
-                    local dz = hrp.Position.Z - pos.Z
-                    dist = math.sqrt(dx*dx + dz*dz)
-                end
-                table.insert(doors, {pos = pos, dist = dist, key = key})
-            end
-        end
-    end
-    table.sort(doors, function(a, b) return a.dist < b.dist end)
-    return doors
-end
-
-local function tpNextDoor()
-    local hrp = getMyHRP()
-    if not hrp then return end
-    if #allDoors == 0 then
-        allDoors = loadAllDoors()
-        print("Portes chargées:", #allDoors)
-    end
-    if doorIndex > #allDoors then
-        print("Toutes les portes visitées!")
-        return
-    end
-    local door = allDoors[doorIndex]
-    hrp.Position = Vector3.new(door.pos.X, door.pos.Y, door.pos.Z)
-    print("Porte " .. doorIndex .. "/" .. #allDoors)
-    doorIndex = doorIndex + 1
-end
-
--- ============================================
--- WAYPOINT
--- ============================================
-local savedWaypoint = nil
-
-local function saveWaypoint()
-    local hrp = getMyHRP()
-    if not hrp then return end
-    savedWaypoint = hrp.Position
-    if type(notify) == "function" then notify("Waypoint Saved!", "Press F3 to TP back", 2) end
-end
-
-local function tpToWaypoint()
-    local hrp = getMyHRP()
-    if not hrp then return end
-    if not savedWaypoint then
-        if type(notify) == "function" then notify("No Waypoint!", "Press F6 to save position", 2) end
-        return
-    end
-    hrp.Position = savedWaypoint
-    if type(notify) == "function" then notify("Teleported!", "Back to waypoint", 2) end
-end
-
-local function clearWaypoint()
-    savedWaypoint = nil
-    if type(notify) == "function" then notify("Waypoint Cleared!", "Press F6 to save new", 2) end
-end
 
 -- ============================================
 -- DRAG
@@ -658,19 +491,7 @@ local function drawInvPanel()
     local w = 260
     local lineH = 17
 
-    local wanted = isWanted(target)
-    local cop = isCop(target)
-    local job = target:GetAttribute("Job") or "None"
     local isStaff, staffRole = checkIfStaff(target)
-
-    local hrp = getMyHRP()
-    local char = target.Character
-    local pHRP = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso"))
-    local dist = "?"
-    if hrp and pHRP then
-        local ok, pos = pcall(function() return pHRP.Position end)
-        if ok and pos then dist = math.floor(getDist(hrp.Position, pos)) .. "m" end
-    end
 
     local backpackItems = {}
     local bp = target:FindFirstChild("Backpack")
@@ -681,6 +502,7 @@ local function drawInvPanel()
     end
 
     local equippedItems = {}
+    local char = target.Character
     if char then
         for i, item in ipairs(char:GetChildren()) do
             if item:IsA("Tool") then table.insert(equippedItems, item.Name) end
@@ -692,7 +514,7 @@ local function drawInvPanel()
         table.insert(lines, {text = text, color = color, size = size or 12})
     end
 
-    local statusText = "Civilian"
+    local statusText = "Normal"
     local statusColor = Color3.new(0.6, 0.6, 0.6)
     if target == localPlayer then
         statusText = "YOU"
@@ -700,16 +522,9 @@ local function drawInvPanel()
     elseif isStaff then
         statusText = staffRole
         statusColor = Color3.new(1, 0.5, 0.1)
-    elseif wanted then
-        statusText = "WANTED"
-        statusColor = Color3.new(1, 0.3, 0.3)
-    elseif cop then
-        statusText = "COP (Job: " .. tostring(job) .. ")"
-        statusColor = Color3.new(0.4, 0.6, 1)
     end
 
     add("Status: " .. statusText, statusColor, 13)
-    add("Distance: " .. dist, Color3.new(0.6, 0.6, 0.6))
     add("UserId: " .. tostring(target.UserId), Color3.new(0.5, 0.5, 0.5), 11)
     add(" ", Color3.new(1,1,1), 4)
     add("EQUIPPED (" .. #equippedItems .. "):", Color3.new(0.5, 1, 0.5), 13)
@@ -764,28 +579,16 @@ local function getPlayerNames()
     return names
 end
 
-UI.AddTab("EMDEN", function(tab)
+UI.AddTab("send ur butt", function(tab)
 
-    local espSec = tab:Section("ESP Settings", "Left")
-    espSec:Toggle("copesp", "Cop ESP", true, function(state) _G.ESPCops = state end)
-    espSec:ColorPicker("copcolor", 0, 0, 1, 1, function(color) _G.ColorCop = color end)
-    espSec:Toggle("wantedesp", "Wanted ESP", true, function(state) _G.ESPWanted = state end)
-    espSec:ColorPicker("Wantedcolor", 1, 0, 0, 1, function(color) _G.ColorWanted = color end)
-
-    local doorSec = tab:Section("Door TP", "Left")
-    doorSec:Button("nextdoor", "Next Door [F2]", function() tpNextDoor() end)
-
-    local waypointSec = tab:Section("Waypoint", "Left")
-    waypointSec:Button("savewaypoint", "Save Waypoint [F6]", function() saveWaypoint() end)
-    waypointSec:Button("tpwaypoint", "TP to Waypoint [F3]", function() tpToWaypoint() end)
-    waypointSec:Button("clearwaypoint", "Clear Waypoint [F5]", function() clearWaypoint() end)
-
+    -- DRAG
     local dragSec = tab:Section("Inventory Drag", "Left")
     dragSec:Toggle("dragitems", "Auto Drag Items [F4]", false, function(state)
         dragRunning = state
         if not dragRunning then mouse1release() slotIndex = 1 mousemoveabs(640, 360) end
     end)
 
+    -- STAFF DETECTOR
     local staffSec = tab:Section("Staff Detector", "Left")
     staffSec:Toggle("staffalerts", "Staff Join Alerts", true, function(state)
         staffAlerts = state
@@ -829,6 +632,7 @@ UI.AddTab("EMDEN", function(tab)
         if staffPanelVisible then drawStaffPanel() end
     end)
 
+    -- INVENTORY CHECKER
     local invSec = tab:Section("Inventory Checker", "Left")
     invSec:Toggle("showinv", "Show Inventory Panel", false, function(state)
         invPanelVisible = state
@@ -851,34 +655,10 @@ UI.AddTab("EMDEN", function(tab)
             notify("Refreshed!", #Players:GetPlayers() .. " players", 2)
         end
     end)
-    invSec:Button("tpselected", "TP to Selected Player", function()
-        if not selectedInvPlayer then
-            if type(notify) == "function" then notify("No player selected!", "Pick one", 2) end
-            return
-        end
-        local target = Players:FindFirstChild(selectedInvPlayer)
-        local hrp = getMyHRP()
-        if target and hrp then
-            local char = target.Character
-            local pHRP = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso"))
-            if pHRP then
-                hrp.Position = Vector3.new(pHRP.Position.X, pHRP.Position.Y + 3, pHRP.Position.Z)
-                if type(notify) == "function" then notify("Teleported!", "To " .. selectedInvPlayer, 2) end
-            end
-        end
-    end)
 
+    -- INFO
     local infoSec = tab:Section("Info", "Right")
-    infoSec:Text("=== ESP ===")
-    infoSec:Text("Cop = Blue | Wanted = Red")
-    infoSec:Spacing()
-    infoSec:Text("=== Door TP ===")
-    infoSec:Text("F2 = Next door")
-    infoSec:Spacing()
-    infoSec:Text("=== Waypoint ===")
-    infoSec:Text("F6 = Save | F3 = TP | F5 = Clear")
-    infoSec:Spacing()
-    infoSec:Text("=== Drag ===")
+    infoSec:Text("=== Inventory Drag ===")
     infoSec:Text("F4 = Toggle drag")
     infoSec:Spacing()
     infoSec:Text("=== Staff Detector ===")
@@ -893,32 +673,26 @@ UI.AddTab("EMDEN", function(tab)
 end)
 
 if type(notify) == "function" then
-    notify("Emden Cheat V3.0", "All systems loaded!", 3)
+    notify("send ur butt", "Loaded!", 3)
 end
 
 -- ============================================
 -- KEYBINDS
 -- ============================================
 local lastTABPress = false
+local lastF4Press = false
 
 while true do
-    local f2Press = iskeypressed(0x71)
-    local f3Press = iskeypressed(0x72)
     local f4Press = iskeypressed(0x73)
-    local f5Press = iskeypressed(0x74)
-    local f6Press = iskeypressed(0x75)
     local tabPress = iskeypressed(0x09)
 
-    if f2Press and not lastF2Press then tpNextDoor() end
-    if f3Press and not lastF3Press then tpToWaypoint() end
     if f4Press and not lastF4Press then
         dragRunning = not dragRunning
         if not dragRunning then mouse1release() slotIndex = 1 mousemoveabs(640, 360) end
         UI.SetValue("dragitems", dragRunning)
         task.wait(0.5)
     end
-    if f5Press and not lastF5Press then clearWaypoint() end
-    if f6Press and not lastF6Press then saveWaypoint() end
+
     if tabPress and not lastTABPress then
         staffPanelVisible = not staffPanelVisible
         invPanelVisible = false
@@ -933,11 +707,7 @@ while true do
         task.wait(0.3)
     end
 
-    lastF2Press = f2Press
-    lastF3Press = f3Press
     lastF4Press = f4Press
-    lastF5Press = f5Press
-    lastF6Press = f6Press
     lastTABPress = tabPress
     task.wait(0.01)
 end
